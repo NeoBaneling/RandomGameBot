@@ -1,4 +1,5 @@
 import discord
+from discord.ext import tasks
 import os
 import random
 import time
@@ -6,26 +7,22 @@ import time
 client = discord.Client()
 gameList = []
 zergProne = False
-timeSinceLastDebug = time.time()
+zergProneChecked = False
+zergProneTick = 20
+rushTick = 2
 
 @client.event
 async def on_ready():
   print('We have logged in as {0.user}'.format(client))
+  setZergProne.start()
 
 @client.event
 async def on_message(message):
   global zergProne
-  global timeSinceLastDebug
+  global zergProneChecked
 
   if (message.author == client.user):
     return
-
-  # About every 22 hrs and 30 mins we're gonna get zerg prone
-  if (not zergProne and time.time() > timeSinceLastDebug + 81000):
-    zergProne = True
-  # Every even hour after, a zergling will infest the list of saved games
-  elif (zergProne and (timeSinceLastDebug % 7200) == 0):
-    saveGameName('zergling')
 
   sender = str(message.author)
 
@@ -36,6 +33,7 @@ async def on_message(message):
 
   if message.content.startswith('/debug'):
     await message.channel.send('Running diagnostics...')
+
     time.sleep(2)
     if (not zergProne):
       response = 'No zerglings found here! Thank you for being vigilant ' + sender + '.'
@@ -45,7 +43,10 @@ async def on_message(message):
       await message.channel.send('La█nching an█ivirus s█ftware...')
       time.sleep(9)
       response = 'Zerglings eradicated. I would have been assimilated if it weren\'t for you ' + sender + '!'
-      timeSinceLastDebug = time.time()
+      addZergling.stop()
+
+    zergProneChecked = False
+    setZergProne.restart()
 
   if message.content.startswith('/feed '):
     saveGameName(message.content[6:len(message.content)])
@@ -86,7 +87,7 @@ def getRandomGames(number):
     return games
 
 def saveGameName(game):
-  if (not game.lower() in gameList):
+  if (not game.lower() in gameList or game == 'zergling'):
     gameList.append(game.lower())
 
 def removeGameName(game):
@@ -94,5 +95,23 @@ def removeGameName(game):
     return 'I can\'t find that game in my RAM. It sounds delicious though!'
   gameList.remove(game.lower())
   return 'https://media.giphy.com/media/QVbghw1ThCJNK/giphy.gif'
+
+@tasks.loop(hours=rushTick)
+async def addZergling():
+  saveGameName('zergling')
+
+@tasks.loop(hours=zergProneTick)
+async def setZergProne():
+  global zergProne
+  global zergProneChecked
+  if (not zergProneChecked):
+    zergProneChecked = True
+    print('zerg prone has been checked')
+  else:
+    zergProne = True
+    addZergling.start()
+    setZergProne.stop()
+    zergProneChecked = False
+    print('beginning zerg rush')
 
 client.run(os.getenv('TOKEN'))
