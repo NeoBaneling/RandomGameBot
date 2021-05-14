@@ -26,7 +26,7 @@ async def on_message(message):
 
   sender = str(message.author)
 
-  response = 'ERROR! That is not a valid command! Please retype your command, or consult my available commands with \'!help GAMEINATOR\'.'
+  response = ''
 
   if message.content.startswith('!help GAMEINATOR'):
     response = getHelp()
@@ -64,7 +64,11 @@ async def on_message(message):
   if (message.content.startswith('/vomit ')):
     response = removeGameName(message.content[7:len(message.content)])
 
-  await message.channel.send(response)
+  if (response == '' and message.content.startswith('/')):
+    response = 'ERROR! That is not a valid command! Please retype your command, or consult my available commands with \'!help GAMEINATOR\'.'
+
+  if (response != ''):
+    await message.channel.send(response)
 
 def getHelp():
   return ('I am {0.user}. I suggest games at random when prodded. You can feed me games that you would like to play. Prone to zerg rushes if not properly monitored.\n\n------------------\n\n/debug\nRemoves any zerglings from my shell.\n\n/feed <game>\nAdds the game to my random storage.\n\n/prod (quantity)\nGets a random game from my storage. You can prod an optional quantity from one to three.\n\n/storage\nLists all games in my random storage.\n\n/vomit <game>\nRemoves a game from my random storage.\n\n------------------\n\n'.format(client))
